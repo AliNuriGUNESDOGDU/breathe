@@ -83,26 +83,26 @@ class PickPlace(object):
         # q_pick = [1.53,0.65,-1.08,-1.18,-1.59,-0.07]
         # q_show = [1.03,0.83,-1.23,-3.00,-2.10,-1.68]
         # q_release = [-0.37,0.67,-1.21,-1.1,-1.61,-0.85]
-        q_wait = [2.15,0.99,-2.1,-0.98,-1.57,-1.57]
+        q_wait = [1.5546956062316895, 1.0360864400863647, -2.09479791322817, -1.3215044180499476, -1.4791424910174769, -1.658243481312887]
         q_before_pick = [2.19,0.57,-1.07,-1.07,-1.57,-1.04]
         q_go_pick = [2.19,0.68,-1.10,-1.19,-1.57,-1.04]
         q_after_pick = q_before_pick
-        q_show = [2.15,0.99,-2.1,-0.98,-1.57,-1.57]
+        q_show = [1.5546956062316895, 1.0360864400863647, -2.09479791322817, -0.67, -1.4791424910174769, -1.658243481312887]
         q_before_release = [1.12,0.57,-1.07,-1.07,-1.57,-1.04]
         q_release = [1.12,0.68,-1.10,-1.19,-1.57,-1.04]
         q_after_release = q_before_release
         # Times
         t_go_wait = 0.8
-        t_wait = 1.4
-        t_before_pick = 2.4
+        t_wait = 0.4
+        t_before_pick = 3.4
         t_go_pick = 1.0
         t_gripper_open = 0.3
         t_pick = 0.5
         t_gripper_close = 0.2
         t_after_pick = 1.0
         t_go_show = 2.4
-        t_show = 1.6
-        t_before_release = 3.8
+        t_show = 0.1
+        t_before_release = 2.8
         t_go_release = 1.0
         t_release = 1.0
         t_after_release = 1.0
@@ -172,7 +172,6 @@ class PickPlace(object):
                 pass
             elif IN_BEFORE_PICK:
                 self.go(q_before_pick,t_before_pick)
-                self.gripper_pub.publish("0.0")
                 IN_BEFORE_PICK = False
                 BEFORE_PICK = True
                 print("IN_BEFORE_PICK")
@@ -186,6 +185,7 @@ class PickPlace(object):
                 pass
             elif IN_GO_PICK:
                 self.go(q_go_pick,t_go_pick)
+                self.gripper_pub.publish("0.45")
                 IN_GO_PICK = False
                 GO_PICK = True
                 print("IN_GO_PICK")
@@ -282,7 +282,7 @@ class PickPlace(object):
                 pass
             elif IN_RELEASE:
                 t_passed = 0.0
-                self.gripper_pub.publish("0")
+                self.gripper_pub.publish("0.45")
                 IN_RELEASE = False
                 RELEASE = True
                 print("IN_RELEASE")
@@ -343,18 +343,18 @@ class PickPlace(object):
         # q_pick = [1.53,0.65,-1.08,-1.18,-1.59,-0.07]
         # q_show = [1.03,0.83,-1.23,-3.00,-2.10,-1.68]
         # q_release = [-0.37,0.67,-1.21,-1.1,-1.61,-0.85]
-        q_wait = [2.15,0.99,-2.1,-0.98,-1.57,-1.57]
+        q_wait = [1.5546956062316895, 1.0360864400863647, -2.09479791322817, -1.3215044180499476, -1.4791424910174769, -1.658243481312887]
         q_before_pick = [2.19,0.57,-1.07,-1.07,-1.57,-1.04]
         q_go_pick = [2.19,0.68,-1.10,-1.19,-1.57,-1.04]
         q_after_pick = q_before_pick
-        q_show = [2.15,0.99,-2.1,-0.98,-1.57,-1.57]
+        q_show = [1.5546956062316895, 1.0360864400863647, -2.09479791322817, -1.07, -1.4791424910174769, -1.658243481312887]
         q_before_release = [1.12,0.57,-1.07,-1.07,-1.57,-1.04]
         q_release = [1.12,0.68,-1.10,-1.19,-1.57,-1.04]
         q_after_release = q_before_release
         # Times
         t_go_wait = 0.8
-        t_wait = 1.4
-        t_before_pick = 2.4
+        t_wait = 0.4
+        t_before_pick = 3.4
         t_go_pick = 1.0
         t_gripper_open = 0.3
         t_pick = 0.5
@@ -362,7 +362,7 @@ class PickPlace(object):
         t_after_pick = 1.0
         t_go_show = 2.4
         t_show = 1.6
-        t_before_release = 3.8
+        t_before_release = 2.8
         t_go_release = 1.0
         t_release = 1.0
         t_after_release = 1.0
@@ -432,7 +432,6 @@ class PickPlace(object):
                 pass
             elif IN_BEFORE_PICK:
                 self.go(q_before_pick,t_before_pick)
-                self.gripper_pub.publish("0.0")
                 IN_BEFORE_PICK = False
                 BEFORE_PICK = True
                 print("IN_BEFORE_PICK")
@@ -446,6 +445,7 @@ class PickPlace(object):
                 pass
             elif IN_GO_PICK:
                 self.go(q_go_pick,t_go_pick)
+                self.gripper_pub.publish("0.45")
                 IN_GO_PICK = False
                 GO_PICK = True
                 print("IN_GO_PICK")
@@ -511,18 +511,18 @@ class PickPlace(object):
         # q_pick = [1.53,0.65,-1.08,-1.18,-1.59,-0.07]
         # q_show = [1.03,0.83,-1.23,-3.00,-2.10,-1.68]
         # q_release = [-0.37,0.67,-1.21,-1.1,-1.61,-0.85]
-        q_wait = [2.15,0.99,-2.1,-0.98,-1.57,-1.57]
+        q_wait = [1.5546956062316895, 1.0360864400863647, -2.09479791322817, -1.3215044180499476, -1.4791424910174769, -1.658243481312887]
         q_before_pick = [2.19,0.57,-1.07,-1.07,-1.57,-1.04]
         q_go_pick = [2.19,0.68,-1.10,-1.19,-1.57,-1.04]
         q_after_pick = q_before_pick
-        q_show = [2.15,0.99,-2.1,-0.98,-1.57,-1.57]
+        q_show = [1.5546956062316895, 1.0360864400863647, -2.09479791322817, -1.3215044180499476, -1.4791424910174769, -1.658243481312887]
         q_before_release = [1.12,0.57,-1.07,-1.07,-1.57,-1.04]
         q_release = [1.12,0.68,-1.10,-1.19,-1.57,-1.04]
         q_after_release = q_before_release
         # Times
         t_go_wait = 0.8
-        t_wait = 1.4
-        t_before_pick = 2.4
+        t_wait = 0.4
+        t_before_pick = 3.4
         t_go_pick = 1.0
         t_gripper_open = 0.3
         t_pick = 0.5
@@ -530,7 +530,7 @@ class PickPlace(object):
         t_after_pick = 1.0
         t_go_show = 2.4
         t_show = 1.6
-        t_before_release = 3.8
+        t_before_release = 2.8
         t_go_release = 1.0
         t_release = 1.0
         t_after_release = 1.0
@@ -611,7 +611,7 @@ class PickPlace(object):
                 pass
             elif IN_RELEASE:
                 t_passed = 0.0
-                self.gripper_pub.publish("0")
+                self.gripper_pub.publish("0.45")
                 IN_RELEASE = False
                 RELEASE = True
                 print("IN_RELEASE")
@@ -737,13 +737,13 @@ if __name__ == '__main__':
         #q1 = [0.0,0.0,0.0,0.0,0.0,0.0]
         q1 = [2.34,0.50,-0.76,-1.33,-1.55,-0.88]
         q1 = [2.19,0.68,-1.10,-1.19,-1.57,-1.04]
-        q1 = [2.15,0.99,-2.1,-0.98,-1.57,-1.57]
-        #q1 = [0.66, 0.76,-1.32,-1.03,-1.57,-2.62]
+        q1 = [1.5546956062316895, 1.0360864400863647, -2.09479791322817, -0.67, -1.4791424910174769, -1.658243481312887]
+        # q1 = [0.66, 0.76,-1.32,-1.03,-1.57,-2.62]
         # q1 = [1.99,0.89,-0.95,-3.11,-2.02,-1.59]
         # pp.grip_now()
-        # pp.go(q1,13.0)
-        # pp.state_machine()
-        pp.state_machine_put_only()
+        # pp.go(q1,1.0)
+        pp.state_machine()
+        # pp.state_machine_put_only()
         #pp.grip_now()
         #send2take()
         

@@ -69,7 +69,7 @@ class Breathe(object):
         self.plan = None
         
         self.gaze_point = np.array([-0.58, 0.57, -0.32])
-        self.move_vector = (np.array([-3, 0, 1])
+        self.move_vector = (np.array([0, 1, 1])
                             / np.linalg.norm(np.array([-3, 0, 1])))
         self.start_client()
 
@@ -152,9 +152,9 @@ class Breathe(object):
             namespace_,  # namespace of the action topics
             control_msgs.msg.FollowJointTrajectoryAction  # action type
         )
-        print "Waiting for server..."
+        print ("Waiting for server...")
         self.client.wait_for_server()
-        print "Connected to server"
+        print ("Connected to server")
         self.goal_j = control_msgs.msg.FollowJointTrajectoryGoal()
         self.goal_j.trajectory = trajectory_msgs.msg.JointTrajectory()
         self.goal_j.trajectory.joint_names = JOINT_NAMES
@@ -348,11 +348,11 @@ if __name__ == '__main__':
         parser.add_argument("-s", "--source", type=int, default="1",
                             help="Value between 0.0 and 0.2")
         args = parser.parse_args()
-        print args.amplitude, args.bpm, args.gaze, args.source
+        print (args.amplitude, args.bpm, args.gaze, args.source)
 
         br = Breathe(args)
         #send2take()
-        rospy.sleep(5)
+        # rospy.sleep(5)
 
         a1 = pp.PickPlace()
         a2 = pp.PickPlace()
@@ -361,12 +361,12 @@ if __name__ == '__main__':
         rospy.loginfo("continue")
         print("--------------------------")
         print("--------------------------")
-        print("STARTING NOW")
+        print("\tSTARTING NOW")
         print("--------------------------")
         print("--------------------------")
+        # a1.state_machine()
+        print ("now or never")
         a1.state_machine()
-        print "now or never"
-        a1.state_machine_only_take()
         br.breathe_now()
         rate = 10
         sample = rospy.Rate(rate)
@@ -374,15 +374,16 @@ if __name__ == '__main__':
             and not rospy.is_shutdown()):
             #print "not yet"
             sample.sleep()
-        print "now or never"
-        a1.state_machine_put_only()
-        a1.state_machine_only_take()
+        print ("now or never")
+        #a1.state_machine_put_only()
+        #a1.state_machine_only_take()
+        a1.state_machine()
         br.breathe_now()
         while ((br.client.get_state()!=actionlib_msgs.msg.GoalStatus.SUCCEEDED)
             and not rospy.is_shutdown()):
             #print "not yet"
             sample.sleep()
-        a1.state_machine_put_only()
+        a1.state_machine()
         #rospy.sleep(12)
         # br.amplitude = 0.2
         # br.breathe_now()
@@ -392,7 +393,7 @@ if __name__ == '__main__':
         # br.breathe_now()
         # rospy.sleep(10)
         # a.state_machine()
-        print "finished"
+        print ("finished")
         #br.send_default()
         
         rospy.spin()
