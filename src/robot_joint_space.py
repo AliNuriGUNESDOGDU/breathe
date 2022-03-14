@@ -15,6 +15,7 @@ import actionlib
 import actionlib_msgs.msg
 import control_msgs.msg
 import moveit_commander
+import rosparam
 import rospy
 import tf
 import trajectory_msgs.msg
@@ -31,10 +32,18 @@ class PickPlace(object):
 
     def __init__(self):
         
-        # Gripper publisher and joint controller client
+        # Upload parameter server
+        file_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            'config/test.yaml')
+        paramlist = rosparam.load_file(file_path,"calib_params")
+        for params, ns in paramlist:
+            rosparam.upload_params(ns, params)
+        # start initial parameters
         self.gripper_pub = None
         self.client = None
         self.goal_j = None
+
 
         #rospy.init_node('pick_place', anonymous=True)
         # Start outputs
@@ -692,45 +701,12 @@ class PickPlace(object):
         self.gripper_pub.publish("0.0")
         print ("published")
 
-def send2take():
-    group_name = "manipulator"
-    group = moveit_commander.MoveGroupCommander(group_name)
-    group.allow_replanning(True)
-    group.set_goal_position_tolerance(0.01)
-    group.set_goal_orientation_tolerance(0.01)
-    group.set_planning_time(2)
-    wpose = group.get_current_pose().pose
-    print (wpose)
-    wpose.position.x = -0.262
-    wpose.position.y = -0.165
-    wpose.position.z = 0.532
-    wpose.orientation.x = -0.5
-    wpose.orientation.y = -0.5
-    wpose.orientation.z = 0.5
-    wpose.orientation.w = 0.5
-    group.set_pose_target(wpose)
-    plan = group.go(wait=True)
-    group.stop()
-    group.clear_pose_targets()
-    
-    
-    # wpose = group.get_current_pose().pose
-    # wpose.position.x = -0.33
-    # wpose.position.y += -0.0
-    # wpose.position.z = 0.11
-    # wpose.orientation.x = 0.44
-    # wpose.orientation.y = 0.84
-    # wpose.orientation.z = 0.12
-    # wpose.orientation.w = -0.267
-    # group.set_pose_target(wpose)
-    
-    # plan = group.go(wait=True)
-    # group.stop()
-    # group.clear_pose_targets()
-
 if __name__ == '__main__':
     try:
         rospy.init_node('pickandplace', anonymous=True)
+        #print (a[0](1))
+        #rosparam.upload_params('calib_params',a[0])
+        
         pp = PickPlace()
         q1 = [2.15,0.99,-2.1,-0.98,-1.57,-1.57]
         #pp.go(q1,1.2)
@@ -743,7 +719,7 @@ if __name__ == '__main__':
         # pp.grip_now()
         q1 = [2.948946237564087, 1.2651704549789429, -1.7448294798480433, -1.0737288633929651,
   -1.5695560614215296, -1.71824819246401]
-        pp.go(q1,10.0)
+        # pp.go(q1,10.0)
         # pp.state_machine()
         # pp.state_machine_put_only()
         #pp.grip_now()
