@@ -3,24 +3,55 @@
 """Module to give UR5 ability to pick and place
 This module uses PEP-8 as coding standard.
 """
-
-import argparse
-import copy
-import math
-import numpy as np
-import os
-import sys
-
 import actionlib
 import actionlib_msgs.msg
 import control_msgs.msg
-import moveit_commander
+import std_msgs.msg
 import rosparam
 import rospy
-import tf
+import os
 import trajectory_msgs.msg
 
-from std_msgs.msg import String
+class StateNode(object):
+    def __init__(self,input):
+        (name,goal_type,goal,time,ros_handle) = input
+        self.name = name
+        self.goal = goal
+        self.goal_type = goal_type
+        self.time = time
+        self.ros_handle = ros_handle
+        self.time_passed = 0.0
+    def action(self):
+        pass
+    def finished(self):
+        return True
+
+class Maneuver(StateNode):
+    def action(self):
+        """Send robot to calculated joint positions
+        """
+        self.goal_type.trajectory.points = [
+            trajectory_msgs.msg.JointTrajectoryPoint(
+                positions = self.goal, 
+                velocities = [0,0,0,0,0,0],
+                time_from_start=rospy.Duration(self.time))]
+        self.ros_handle.send_goal(self.goal_type)
+    def finished(self):
+        return (self.ros_handle.get_state()
+                == actionlib_msgs.msg.GoalStatus.SUCCEEDED)
+
+class GripperControl(StateNode):
+    def action(self):
+        """Control Gripper
+        """
+        self.ros_handle.publish(str(self.goal))
+    def finished(self):
+        self.ros_handle.publish(str(self.goal))
+        if(self.time>self.time_passed):
+            self.time_passed += 0.1
+            return False
+        else:
+            return True
 
 
 class PickPlace(object):
@@ -29,9 +60,7 @@ class PickPlace(object):
     send_default():
     method3():
     """
-
-    def __init__(self):
-        
+    def __init__(self):        
         # Upload parameter server
         file_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
@@ -43,16 +72,16 @@ class PickPlace(object):
         self.gripper_pub = None
         self.client = None
         self.goal_j = None
-
-
-        #rospy.init_node('pick_place', anonymous=True)
-        # Start outputs
+        self.node_list = []
+        self.close = 255
+        self.open = 185
+        self.pick = 208
         self.start_client()
         self.start_publisher()
 
     def start_publisher(self):
         self.gripper_pub = rospy.Publisher(
-            'gripper_control', String, queue_size=1)
+            'gripper_control', std_msgs.msg.String, queue_size=1)
 
     def start_client(self):
         """Method to start action client
@@ -74,602 +103,172 @@ class PickPlace(object):
             namespace_,  # namespace of the action topics
             control_msgs.msg.FollowJointTrajectoryAction  # action type
         )
-        print("Waiting for server...")
+        print("Waiting for server ...")
         self.client.wait_for_server()
         print("Connected to server")
         self.goal_j = control_msgs.msg.FollowJointTrajectoryGoal()
         self.goal_j.trajectory = trajectory_msgs.msg.JointTrajectory()
         self.goal_j.trajectory.joint_names = JOINT_NAMES
-
-    def state_machine(self):
-        """State machine of pick place and wait function
-        GO_WAIT->WAIT->GO_PICK->PICK->GO_SHOW->SHOW->GO_RELEASE->RELEASE->END
-        """
-        # Parameters of state machine
-        # # Joint states of the pick and place action
-        # q_wait = [1.83,1.01,-1.92,-1.18,-2.04,-0.84]
-        # q_go_pick = [1.53,0.65,-1.08,-1.18,-1.59,-0.07]
-        # q_pick = [1.53,0.65,-1.08,-1.18,-1.59,-0.07]
-        # q_show = [1.03,0.83,-1.23,-3.00,-2.10,-1.68]
-        # q_release = [-0.37,0.67,-1.21,-1.1,-1.61,-0.85]
-        q_wait = [1.5546956062316895, 1.0360864400863647, -2.09479791322817, -1.3215044180499476, -1.4791424910174769, -1.658243481312887]
-        q_before_pick = [2.19,0.57,-1.07,-1.07,-1.57,-1.04]
-        q_go_pick = [2.19,0.68,-1.10,-1.19,-1.57,-1.04]
-        q_after_pick = q_before_pick
-        q_show = [1.5546956062316895, 1.0360864400863647, -2.09479791322817, -0.67, -1.4791424910174769, -1.658243481312887]
-        q_before_release = [1.12,0.57,-1.07,-1.07,-1.57,-1.04]
-        q_release = [1.12,0.68,-1.10,-1.19,-1.57,-1.04]
-        q_after_release = q_before_release
-        # Times
-        t_go_wait = 0.8
-        t_wait = 0.4
-        t_before_pick = 3.4
-        t_go_pick = 1.0
-        t_gripper_open = 0.3
-        t_pick = 0.5
-        t_gripper_close = 0.2
-        t_after_pick = 1.0
-        t_go_show = 2.4
-        t_show = 0.1
-        t_before_release = 2.8
-        t_go_release = 1.0
-        t_release = 1.0
-        t_after_release = 1.0
-        t_go_end = 4.4
-        # Other Params
-        rate = 20 # Hz
-        t_passed = 0.0        
-        # States
-        GO_WAIT         = False
-        WAIT            = False
-        GO_PICK         = False
-        PICK            = False
-        GO_SHOW         = False
-        SHOW            = False
-        GO_RELEASE      = False
-        RELEASE         = False
-        END             = False
-        IN_GO_WAIT      = True
-        IN_WAIT         = False
-        IN_BEFORE_PICK  = False
-        BEFORE_PICK     = False
-        IN_GO_PICK      = False
-        IN_PICK         = False
-        IN_AFTER_PICK   = False
-        AFTER_PICK      = False
-        IN_GO_SHOW      = False
-        IN_SHOW         = False
-        IN_BEFORE_RELEASE= False
-        BEFORE_RELEASE   = False
-        IN_GO_RELEASE   = False
-        IN_RELEASE      = False
-        IN_AFTER_RELEASE= False
-        AFTER_RELEASE   = False
-        IN_END          = False
-
+    
+    def state_machine_generic(self):
         # State Machine
-        sample = rospy.Rate(rate)
-        while not rospy.is_shutdown():            
-            sample.sleep()
-            if IN_GO_WAIT:
-                self.go(q_wait,t_go_wait)
-                IN_GO_WAIT = False
-                GO_WAIT = True
-                print("IN_GO_WAIT")
-                pass
-            elif GO_WAIT:
-                if (self.client.get_state() 
-                == actionlib_msgs.msg.GoalStatus.SUCCEEDED):
-                    GO_WAIT = False
-                    IN_WAIT = True
-                    pass
-                pass
-            elif IN_WAIT:
-                t_passed = 0.0
-                IN_WAIT = False
-                WAIT = True
-                print("IN_WAIT")
-                pass
-            if WAIT:
-                if t_passed >= t_wait:
-                    WAIT = False
-                    IN_BEFORE_PICK = True
-                    pass
-                else:
-                    t_passed += 1.0/rate
-                    pass
-                pass
-            elif IN_BEFORE_PICK:
-                self.go(q_before_pick,t_before_pick)
-                IN_BEFORE_PICK = False
-                BEFORE_PICK = True
-                print("IN_BEFORE_PICK")
-                pass
-            elif BEFORE_PICK:
-                if (self.client.get_state() 
-                == actionlib_msgs.msg.GoalStatus.SUCCEEDED):
-                    BEFORE_PICK = False
-                    IN_GO_PICK = True
-                    pass
-                pass
-            elif IN_GO_PICK:
-                self.go(q_go_pick,t_go_pick)
-                self.gripper_pub.publish("0.45")
-                IN_GO_PICK = False
-                GO_PICK = True
-                print("IN_GO_PICK")
-                pass
-            elif GO_PICK:
-                if (self.client.get_state() 
-                == actionlib_msgs.msg.GoalStatus.SUCCEEDED):
-                    GO_PICK = False
-                    IN_PICK = True
-                    pass
-                pass
-            elif IN_PICK:
-                t_passed = 0.0
-                self.gripper_pub.publish("0.57")
-                IN_PICK = False
-                PICK = True
-                print("IN_PICK")
-                pass
-            elif PICK   :
-                if t_passed >= t_pick:
-                    PICK = False
-                    IN_AFTER_PICK = True
-                    pass
-                else:
-                    t_passed += 1.0/rate
-                    pass
-                pass
-            elif IN_AFTER_PICK:
-                self.go(q_after_pick,t_after_pick)
-                IN_AFTER_PICK = False
-                AFTER_PICK = True
-                print("IN_AFTER_PICK")
-                pass
-            elif AFTER_PICK:
-                if (self.client.get_state() 
-                == actionlib_msgs.msg.GoalStatus.SUCCEEDED):
-                    AFTER_PICK = False
-                    IN_GO_SHOW = True
-                    pass
-                pass
-            elif IN_GO_SHOW:
-                self.go(q_show,t_go_show)
-                IN_GO_SHOW = False
-                GO_SHOW = True
-                print("IN_GO_SHOW")
-                pass
-            elif GO_SHOW:
-                if (self.client.get_state() 
-                == actionlib_msgs.msg.GoalStatus.SUCCEEDED):
-                    GO_SHOW = False
-                    IN_SHOW = True
-                    pass
-                pass
-            elif IN_SHOW:
-                t_passed = 0.0
-                IN_SHOW = False
-                SHOW = True
-                print("IN_SHOW")
-                pass
-            elif SHOW:
-                if t_passed >= t_show:
-                    SHOW = False
-                    IN_BEFORE_RELEASE = True
-                    pass
-                else:
-                    t_passed += 1.0/rate
-                    pass
-                pass
-            elif IN_BEFORE_RELEASE:
-                self.go(q_before_release,t_before_release)
-                IN_BEFORE_RELEASE = False
-                BEFORE_RELEASE = True
-                print("IN_BEFORE_RELEASE")
-                pass
-            elif BEFORE_RELEASE:
-                if (self.client.get_state() 
-                == actionlib_msgs.msg.GoalStatus.SUCCEEDED):
-                    BEFORE_RELEASE = False
-                    IN_GO_RELEASE = True
-                    pass
-                pass
-            elif IN_GO_RELEASE:
-                self.go(q_release,t_go_release)
-                IN_GO_RELEASE = False
-                GO_RELEASE = True
-                print("IN_GO_RELEASE")
-                pass
-            elif GO_RELEASE:
-                if (self.client.get_state() 
-                == actionlib_msgs.msg.GoalStatus.SUCCEEDED):
-                    GO_RELEASE = False
-                    IN_RELEASE = True
-                    pass
-                pass
-            elif IN_RELEASE:
-                t_passed = 0.0
-                self.gripper_pub.publish("0.45")
-                IN_RELEASE = False
-                RELEASE = True
-                print("IN_RELEASE")
-                pass
-            elif RELEASE:
-                if t_passed >= t_release:
-                    RELEASE = False
-                    IN_AFTER_RELEASE = True
-                    pass
-                else:
-                    t_passed += 1.0/rate
-                    pass
-                pass
-            elif IN_AFTER_RELEASE:
-                self.go(q_after_release,t_after_release)
-                t_passed = 0.0
-                IN_AFTER_RELEASE = False
-                AFTER_RELEASE = True
-                print("IN_AFTER_RELEASE")
-                pass
-            elif AFTER_RELEASE:
-                if (self.client.get_state() 
-                == actionlib_msgs.msg.GoalStatus.SUCCEEDED):
-                    AFTER_RELEASE = False
-                    IN_END = True
-                    pass
-                else:
-                    t_passed += 1.0/rate
-                    pass
-                pass
-            elif IN_END:
-                #self.gripper_pub.publish("0.7")
-                self.go(q_wait,t_go_end)
-                self.gripper_pub.publish("0.7")
-                IN_END = False
-                END = True
-                print("IN_END")
-                pass
-            elif END    :
-                if (self.client.get_state() 
-                == actionlib_msgs.msg.GoalStatus.SUCCEEDED):
-                    END = False                    
-                    print("Finished machine")
-                    break
-                    pass
-                pass
-            else        :   
-                #rospy.spin()             
-                pass
-    def state_machine_only_take(self):
-        """State machine of pick place and wait function
-        GO_WAIT->WAIT->GO_PICK->PICK->GO_SHOW->SHOW->GO_RELEASE->RELEASE->END
-        """
-        # Parameters of state machine
-        # # Joint states of the pick and place action
-        # q_wait = [1.83,1.01,-1.92,-1.18,-2.04,-0.84]
-        # q_go_pick = [1.53,0.65,-1.08,-1.18,-1.59,-0.07]
-        # q_pick = [1.53,0.65,-1.08,-1.18,-1.59,-0.07]
-        # q_show = [1.03,0.83,-1.23,-3.00,-2.10,-1.68]
-        # q_release = [-0.37,0.67,-1.21,-1.1,-1.61,-0.85]
-        q_wait = [1.5546956062316895, 1.0360864400863647, -2.09479791322817, -1.3215044180499476, -1.4791424910174769, -1.658243481312887]
-        q_before_pick = [2.19,0.57,-1.07,-1.07,-1.57,-1.04]
-        q_go_pick = [2.19,0.68,-1.10,-1.19,-1.57,-1.04]
-        q_after_pick = q_before_pick
-        q_show = [1.5546956062316895, 1.0360864400863647, -2.09479791322817, -1.07, -1.4791424910174769, -1.658243481312887]
-        q_before_release = [1.12,0.57,-1.07,-1.07,-1.57,-1.04]
-        q_release = [1.12,0.68,-1.10,-1.19,-1.57,-1.04]
-        q_after_release = q_before_release
-        # Times
-        t_go_wait = 0.8
-        t_wait = 0.4
-        t_before_pick = 3.4
-        t_go_pick = 1.0
-        t_gripper_open = 0.3
-        t_pick = 0.5
-        t_gripper_close = 0.2
-        t_after_pick = 1.0
-        t_go_show = 2.4
-        t_show = 1.6
-        t_before_release = 2.8
-        t_go_release = 1.0
-        t_release = 1.0
-        t_after_release = 1.0
-        t_go_end = 4.4
-        # Other Params
         rate = 20 # Hz
-        t_passed = 0.0        
-        # States
-        GO_WAIT         = False
-        WAIT            = False
-        GO_PICK         = False
-        PICK            = False
-        GO_SHOW         = False
-        SHOW            = False
-        GO_RELEASE      = False
-        RELEASE         = False
-        END             = False
-        IN_GO_WAIT      = True
-        IN_WAIT         = False
-        IN_BEFORE_PICK  = False
-        BEFORE_PICK     = False
-        IN_GO_PICK      = False
-        IN_PICK         = False
-        IN_AFTER_PICK   = False
-        AFTER_PICK      = False
-        IN_GO_SHOW      = False
-        IN_SHOW         = False
-        IN_BEFORE_RELEASE= False
-        BEFORE_RELEASE   = False
-        IN_GO_RELEASE   = False
-        IN_RELEASE      = False
-        IN_AFTER_RELEASE= False
-        AFTER_RELEASE   = False
-        IN_END          = False
-
-        # State Machine
         sample = rospy.Rate(rate)
-        while not rospy.is_shutdown():            
-            sample.sleep()
-            if IN_GO_WAIT:
-                self.go(q_wait,t_go_wait)
-                IN_GO_WAIT = False
-                GO_WAIT = True
-                print("IN_GO_WAIT")
-                pass
-            elif GO_WAIT:
-                if (self.client.get_state() 
-                == actionlib_msgs.msg.GoalStatus.SUCCEEDED):
-                    GO_WAIT = False
-                    IN_WAIT = True
-                    pass
-                pass
-            elif IN_WAIT:
-                t_passed = 0.0
-                IN_WAIT = False
-                WAIT = True
-                print("IN_WAIT")
-                pass
-            if WAIT:
-                if t_passed >= t_wait:
-                    WAIT = False
-                    IN_BEFORE_PICK = True
-                    pass
-                else:
-                    t_passed += 1.0/rate
-                    pass
-                pass
-            elif IN_BEFORE_PICK:
-                self.go(q_before_pick,t_before_pick)
-                IN_BEFORE_PICK = False
-                BEFORE_PICK = True
-                print("IN_BEFORE_PICK")
-                pass
-            elif BEFORE_PICK:
-                if (self.client.get_state() 
-                == actionlib_msgs.msg.GoalStatus.SUCCEEDED):
-                    BEFORE_PICK = False
-                    IN_GO_PICK = True
-                    pass
-                pass
-            elif IN_GO_PICK:
-                self.go(q_go_pick,t_go_pick)
-                self.gripper_pub.publish("0.45")
-                IN_GO_PICK = False
-                GO_PICK = True
-                print("IN_GO_PICK")
-                pass
-            elif GO_PICK:
-                if (self.client.get_state() 
-                == actionlib_msgs.msg.GoalStatus.SUCCEEDED):
-                    GO_PICK = False
-                    IN_PICK = True
-                    pass
-                pass
-            elif IN_PICK:
-                t_passed = 0.0
-                self.gripper_pub.publish("0.57")
-                IN_PICK = False
-                PICK = True
-                print("IN_PICK")
-                pass
-            elif PICK   :
-                if t_passed >= t_pick:
-                    PICK = False
-                    IN_AFTER_PICK = True
-                    pass
-                else:
-                    t_passed += 1.0/rate
-                    pass
-                pass
-            elif IN_AFTER_PICK:
-                self.go(q_after_pick,t_after_pick)
-                IN_AFTER_PICK = False
-                AFTER_PICK = True
-                print("IN_AFTER_PICK")
-                pass
-            elif AFTER_PICK:
-                if (self.client.get_state() 
-                == actionlib_msgs.msg.GoalStatus.SUCCEEDED):
-                    AFTER_PICK = False
-                    IN_GO_SHOW = True
-                    pass
-                pass
-            elif IN_GO_SHOW:
-                self.go(q_wait,t_go_show)
-                IN_GO_SHOW = False
-                GO_SHOW = True
-                print("IN_GO_SHOW")
-                pass
-            elif GO_SHOW:
-                if (self.client.get_state() 
-                == actionlib_msgs.msg.GoalStatus.SUCCEEDED):
-                    GO_SHOW = False
-                    IN_SHOW = True
-                    break
-                    pass
-                pass
-    def state_machine_put_only(self):
-        """State machine of pick place and wait function
-        GO_WAIT->WAIT->GO_PICK->PICK->GO_SHOW->SHOW->GO_RELEASE->RELEASE->END
-        """
-        # Parameters of state machine
-        # # Joint states of the pick and place action
-        # q_wait = [1.83,1.01,-1.92,-1.18,-2.04,-0.84]
-        # q_go_pick = [1.53,0.65,-1.08,-1.18,-1.59,-0.07]
-        # q_pick = [1.53,0.65,-1.08,-1.18,-1.59,-0.07]
-        # q_show = [1.03,0.83,-1.23,-3.00,-2.10,-1.68]
-        # q_release = [-0.37,0.67,-1.21,-1.1,-1.61,-0.85]
-        q_wait = [1.5546956062316895, 1.0360864400863647, -2.09479791322817, -1.3215044180499476, -1.4791424910174769, -1.658243481312887]
-        q_before_pick = [2.19,0.57,-1.07,-1.07,-1.57,-1.04]
-        q_go_pick = [2.19,0.68,-1.10,-1.19,-1.57,-1.04]
-        q_after_pick = q_before_pick
-        q_show = [1.5546956062316895, 1.0360864400863647, -2.09479791322817, -1.3215044180499476, -1.4791424910174769, -1.658243481312887]
-        q_before_release = [1.12,0.57,-1.07,-1.07,-1.57,-1.04]
-        q_release = [1.12,0.68,-1.10,-1.19,-1.57,-1.04]
-        q_after_release = q_before_release
-        # Times
-        t_go_wait = 0.8
-        t_wait = 0.4
-        t_before_pick = 3.4
-        t_go_pick = 1.0
-        t_gripper_open = 0.3
-        t_pick = 0.5
-        t_gripper_close = 0.2
-        t_after_pick = 1.0
-        t_go_show = 2.4
-        t_show = 1.6
-        t_before_release = 2.8
-        t_go_release = 1.0
-        t_release = 1.0
-        t_after_release = 1.0
-        t_go_end = 4.4
-        # Other Params
-        rate = 20 # Hz
-        t_passed = 0.0        
-        # States
-        GO_WAIT         = False
-        WAIT            = False
-        GO_PICK         = False
-        PICK            = False
-        GO_SHOW         = False
-        SHOW            = False
-        GO_RELEASE      = False
-        RELEASE         = False
-        END             = False
-        IN_GO_WAIT      = True
-        IN_WAIT         = False
-        IN_BEFORE_PICK  = False
-        BEFORE_PICK     = False
-        IN_GO_PICK      = False
-        IN_PICK         = False
-        IN_AFTER_PICK   = False
-        AFTER_PICK      = False
-        IN_GO_SHOW      = False
-        IN_SHOW         = False
-        IN_BEFORE_RELEASE= False
-        BEFORE_RELEASE   = False
-        IN_GO_RELEASE   = False
-        IN_RELEASE      = False
-        IN_AFTER_RELEASE= False
-        AFTER_RELEASE   = False
-        IN_END          = False
 
-        # State Machine
-        sample = rospy.Rate(rate)
-        while not rospy.is_shutdown():            
+        iter = 0
+        curr_state = self.node_list[iter] 
+        curr_state.action()      
+        while not rospy.is_shutdown():  
+            if (iter >= len(self.node_list)-1):
+                if curr_state.finished():
+                    break       
+            if(curr_state.finished()):
+                iter += 1
+                curr_state = self.node_list[iter]
+                curr_state.action()
             sample.sleep()
-            if IN_GO_WAIT:
-                self.go(q_wait,t_go_wait)
-                IN_GO_WAIT = False
-                GO_WAIT = True
-                print("IN_GO_WAIT")
-                pass
-            elif GO_WAIT:
-                if (self.client.get_state() 
-                == actionlib_msgs.msg.GoalStatus.SUCCEEDED):
-                    GO_WAIT = False
-                    IN_BEFORE_RELEASE = True
-                    pass
-                pass
-            elif IN_BEFORE_RELEASE:
-                self.go(q_before_release,t_before_release)
-                IN_BEFORE_RELEASE = False
-                BEFORE_RELEASE = True
-                print("IN_BEFORE_RELEASE")
-                pass
-            elif BEFORE_RELEASE:
-                if (self.client.get_state() 
-                == actionlib_msgs.msg.GoalStatus.SUCCEEDED):
-                    BEFORE_RELEASE = False
-                    IN_GO_RELEASE = True
-                    pass
-                pass
-            elif IN_GO_RELEASE:
-                self.go(q_release,t_go_release)
-                IN_GO_RELEASE = False
-                GO_RELEASE = True
-                print("IN_GO_RELEASE")
-                pass
-            elif GO_RELEASE:
-                if (self.client.get_state() 
-                == actionlib_msgs.msg.GoalStatus.SUCCEEDED):
-                    GO_RELEASE = False
-                    IN_RELEASE = True
-                    pass
-                pass
-            elif IN_RELEASE:
-                t_passed = 0.0
-                self.gripper_pub.publish("0.45")
-                IN_RELEASE = False
-                RELEASE = True
-                print("IN_RELEASE")
-                pass
-            elif RELEASE:
-                if t_passed >= t_release:
-                    RELEASE = False
-                    IN_AFTER_RELEASE = True
-                    pass
-                else:
-                    t_passed += 1.0/rate
-                    pass
-                pass
-            elif IN_AFTER_RELEASE:
-                self.go(q_after_release,t_after_release)
-                t_passed = 0.0
-                IN_AFTER_RELEASE = False
-                AFTER_RELEASE = True
-                print("IN_AFTER_RELEASE")
-                pass
-            elif AFTER_RELEASE:
-                if (self.client.get_state() 
-                == actionlib_msgs.msg.GoalStatus.SUCCEEDED):
-                    AFTER_RELEASE = False
-                    IN_END = True
-                    pass
-                else:
-                    t_passed += 1.0/rate
-                    pass
-                pass
-            elif IN_END:
-                #self.gripper_pub.publish("0.7")
-                self.go(q_wait,t_go_end)
-                self.gripper_pub.publish("0.7")
-                IN_END = False
-                END = True
-                print("IN_END")
-                pass
-            elif END    :
-                if (self.client.get_state() 
-                == actionlib_msgs.msg.GoalStatus.SUCCEEDED):
-                    END = False                    
-                    print("Finished machine")
-                    break
-                    pass
-                pass
-            else        :   
-                #rospy.spin()             
-                pass
+        self.node_list =[]
+    
+    def state_machine_creator_1(self):
+        ######### start as closed ########
+        self.node_list.append(GripperControl(
+            ("close",self.goal_j,self.close,0.2,self.gripper_pub)))
+        self.node_list.append(GripperControl(
+            ("close",self.goal_j,self.close,0.0,self.gripper_pub)))
+        ######### go wait ########
+        self.node_list.append(Maneuver(("wait",self.goal_j,
+            rosparam.get_param("calib_params/wait"),1.0,self.client)))
+        ######### go pick ########
+        self.node_list.append(Maneuver(("ready_pick1",self.goal_j,
+            rosparam.get_param("calib_params/ready_pick1"),4.0,self.client)))
+        self.node_list.append(GripperControl(
+            ("open",self.goal_j,self.open,0.0,self.gripper_pub)))
+        self.node_list.append(Maneuver(("pick1",self.goal_j,
+            rosparam.get_param("calib_params/pick1"),0.7,self.client)))
+        self.node_list.append(GripperControl(
+            ("pick",self.goal_j,self.pick,0.3,self.gripper_pub)))
+        self.node_list.append(Maneuver(("ready_pick1",self.goal_j,
+            rosparam.get_param("calib_params/ready_pick1"),0.7,self.client)))
+        ######### go release ########
+        self.node_list.append(Maneuver(("ready_release",self.goal_j,
+            rosparam.get_param("calib_params/ready_release"),3.0,self.client)))
+        self.node_list.append(Maneuver(("release",self.goal_j,
+            rosparam.get_param("calib_params/release"),1.2,self.client)))
+        self.node_list.append(GripperControl(
+            ("open",self.goal_j,self.open,0.3,self.gripper_pub)))
+        self.node_list.append(Maneuver(("ready_release",self.goal_j,
+            rosparam.get_param("calib_params/ready_release"),1.2,self.client)))
+        self.node_list.append(GripperControl(
+            ("close",self.goal_j,self.close,0.0,self.gripper_pub)))
+        ######### go wait ########
+        self.node_list.append(Maneuver(("wait",self.goal_j,
+            rosparam.get_param("calib_params/wait"),3.0,self.client)))
+
+    def state_machine_creator_2(self):
+        ######### start as closed ########
+        self.node_list.append(GripperControl(
+            ("close",self.goal_j,self.close,0.2,self.gripper_pub)))
+        self.node_list.append(GripperControl(
+            ("close",self.goal_j,self.close,0.0,self.gripper_pub)))
+        ######### go wait ########
+        self.node_list.append(Maneuver(("wait",self.goal_j,
+            rosparam.get_param("calib_params/wait"),1.0,self.client)))
+        ######### go pick ########
+        self.node_list.append(Maneuver(("ready_pick2",self.goal_j,
+            rosparam.get_param("calib_params/ready_pick2"),4.0,self.client)))
+        self.node_list.append(GripperControl(
+            ("open",self.goal_j,self.open,0.0,self.gripper_pub)))
+        self.node_list.append(Maneuver(("pick2",self.goal_j,
+            rosparam.get_param("calib_params/pick2"),0.7,self.client)))
+        self.node_list.append(GripperControl(
+            ("pick",self.goal_j,self.pick,0.3,self.gripper_pub)))
+        self.node_list.append(Maneuver(("ready_pick2",self.goal_j,
+            rosparam.get_param("calib_params/ready_pick2"),0.7,self.client)))
+        ######### go release ########
+        self.node_list.append(Maneuver(("ready_release",self.goal_j,
+            rosparam.get_param("calib_params/ready_release"),3.0,self.client)))
+        self.node_list.append(Maneuver(("release",self.goal_j,
+            rosparam.get_param("calib_params/release"),1.2,self.client)))
+        self.node_list.append(GripperControl(
+            ("open",self.goal_j,self.open,0.3,self.gripper_pub)))
+        self.node_list.append(Maneuver(("ready_release",self.goal_j,
+            rosparam.get_param("calib_params/ready_release"),1.2,self.client)))
+        self.node_list.append(GripperControl(
+            ("close",self.goal_j,self.close,0.0,self.gripper_pub)))
+        ######### go wait ########
+        self.node_list.append(Maneuver(("wait",self.goal_j,
+            rosparam.get_param("calib_params/wait"),3.0,self.client)))
+
+    def state_machine_creator_3(self):
+        ######### start as closed ########
+        self.node_list.append(GripperControl(
+            ("close",self.goal_j,self.close,0.2,self.gripper_pub)))
+        self.node_list.append(GripperControl(
+            ("close",self.goal_j,self.close,0.0,self.gripper_pub)))
+        ######### go wait ########
+        self.node_list.append(Maneuver(("wait",self.goal_j,
+            rosparam.get_param("calib_params/wait"),1.0,self.client)))
+        ######### go pick ########
+        self.node_list.append(Maneuver(("ready_pick3",self.goal_j,
+            rosparam.get_param("calib_params/ready_pick3"),4.0,self.client)))
+        self.node_list.append(GripperControl(
+            ("open",self.goal_j,self.open,0.0,self.gripper_pub)))
+        self.node_list.append(Maneuver(("pick3",self.goal_j,
+            rosparam.get_param("calib_params/pick3"),0.7,self.client)))
+        self.node_list.append(GripperControl(
+            ("pick",self.goal_j,self.pick,0.3,self.gripper_pub)))
+        self.node_list.append(Maneuver(("ready_pick3",self.goal_j,
+            rosparam.get_param("calib_params/ready_pick3"),0.7,self.client)))
+        ######### go release ########
+        self.node_list.append(Maneuver(("ready_release",self.goal_j,
+            rosparam.get_param("calib_params/ready_release"),3.0,self.client)))
+        self.node_list.append(Maneuver(("release",self.goal_j,
+            rosparam.get_param("calib_params/release"),1.2,self.client)))
+        self.node_list.append(GripperControl(
+            ("open",self.goal_j,self.open,0.3,self.gripper_pub)))
+        self.node_list.append(Maneuver(("ready_release",self.goal_j,
+            rosparam.get_param("calib_params/ready_release"),1.2,self.client)))
+        self.node_list.append(GripperControl(
+            ("close",self.goal_j,self.close,0.0,self.gripper_pub)))
+        ######### go wait ########
+        self.node_list.append(Maneuver(("wait",self.goal_j,
+            rosparam.get_param("calib_params/wait"),3.0,self.client)))
+
+
+    def state_machine_creator_4(self):
+        ######### start as closed ########
+        self.node_list.append(GripperControl(
+            ("close",self.goal_j,self.close,0.2,self.gripper_pub)))
+        self.node_list.append(GripperControl(
+            ("close",self.goal_j,self.close,0.0,self.gripper_pub)))
+        ######### go wait ########
+        self.node_list.append(Maneuver(("wait",self.goal_j,
+            rosparam.get_param("calib_params/wait"),1.0,self.client)))
+        ######### go pick ########
+        self.node_list.append(Maneuver(("ready_pick4",self.goal_j,
+            rosparam.get_param("calib_params/ready_pick4"),4.0,self.client)))
+        self.node_list.append(GripperControl(
+            ("open",self.goal_j,self.open,0.0,self.gripper_pub)))
+        self.node_list.append(Maneuver(("pick4",self.goal_j,
+            rosparam.get_param("calib_params/pick4"),0.7,self.client)))
+        self.node_list.append(GripperControl(
+            ("pick",self.goal_j,self.pick,0.3,self.gripper_pub)))
+        self.node_list.append(Maneuver(("ready_pick4",self.goal_j,
+            rosparam.get_param("calib_params/ready_pick4"),0.7,self.client)))
+        ######### go release ########
+        self.node_list.append(Maneuver(("ready_release",self.goal_j,
+            rosparam.get_param("calib_params/ready_release"),3.0,self.client)))
+        self.node_list.append(Maneuver(("release",self.goal_j,
+            rosparam.get_param("calib_params/release"),1.2,self.client)))
+        self.node_list.append(GripperControl(
+            ("open",self.goal_j,self.open,0.3,self.gripper_pub)))
+        self.node_list.append(Maneuver(("ready_release",self.goal_j,
+            rosparam.get_param("calib_params/ready_release"),1.2,self.client)))
+        self.node_list.append(GripperControl(
+            ("close",self.goal_j,self.close,0.0,self.gripper_pub)))
+        ######### go wait ########
+        self.node_list.append(Maneuver(("wait",self.goal_j,
+            rosparam.get_param("calib_params/wait"),3.0,self.client)))
 
     def go(self,q_to_go,time_to_go):
         """Send robot to calculated joint positions
@@ -680,26 +279,6 @@ class PickPlace(object):
                 velocities = [0,0,0,0,0,0],
                 time_from_start=rospy.Duration(time_to_go))]
         self.client.send_goal(self.goal_j)
-    
-    def grip_now(self):
-        self.start_publisher()
-        print ("started publisher")
-        # rospy.sleep(1.0)
-        # self.gripper_pub.publish("0")
-        # print "published"
-        # rospy.sleep(1.0)
-        # self.gripper_pub.publish("0.2")
-        # print "published"
-        # rospy.sleep(1.0)
-        # self.gripper_pub.publish("0.4")
-        # #self.gripper_pub.publish("120")
-        # print "published"
-        # rospy.sleep(1.0)
-        # self.gripper_pub.publish("0.6")
-        # print "published"
-        rospy.sleep(1.0)
-        self.gripper_pub.publish("0.0")
-        print ("published")
 
 if __name__ == '__main__':
     try:
@@ -724,6 +303,15 @@ if __name__ == '__main__':
         # pp.state_machine_put_only()
         #pp.grip_now()
         #send2take()
+        pp.state_machine_creator_1()
+        pp.state_machine_generic()
+        pp.state_machine_creator_2()
+        pp.state_machine_generic()
+        pp.state_machine_creator_3()
+        pp.state_machine_generic()
+        pp.state_machine_creator_4()
+        pp.state_machine_generic()
+        
         
         
         rospy.spin()
