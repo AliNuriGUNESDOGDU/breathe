@@ -32,12 +32,12 @@ int sensorArray[8] = {0,0,0,0,0,0,0,0};
 
 void setup() {
   // initialize serial communications at 9600 bps:
-  Serial.begin(9600);
+  Serial.begin(115200);
   cli();
   TCCR1A = 0;
   TCCR1B = 0;
   TCNT1  = 0;
-  OCR1A = 124;
+  OCR1A = 249;
   TCCR1B |= (1 << WGM12);
   TCCR1B |= (1 << CS11) | (1 << CS10);
   TIMSK1 |= (1 << OCIE1A);

@@ -61,16 +61,17 @@ class FSRCTL(object):
     def serial_step(self):
         start = timeit.default_timer()
         fsr_val = self.ser.readline()
-        print(fsr_val)
+        #print(fsr_val)
         stop = timeit.default_timer()
-        print(stop-start)
+        if ((stop-start)>0.016):
+            print(stop-start)
 
 if __name__ == '__main__':
     try:
         parser = argparse.ArgumentParser()
         parser.add_argument("-p", "--port", type=str, default="/dev/ttyACM0",
                             help="Value between 0.0 and 0.2")
-        parser.add_argument("-b", "--baudrate", type=int, default="9600",
+        parser.add_argument("-b", "--baudrate", type=int, default="115200",
                             help="Value between 0.0 and 0.2")
         parser.add_argument("-f", "--file", type=str, default="subject",
                             help="Value between 0.0 and 0.2")
