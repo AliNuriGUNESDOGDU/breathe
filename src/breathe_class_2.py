@@ -23,6 +23,7 @@ import tf
 import trajectory_msgs.msg
 
 import robot_joint_space as pp
+import fsr_controller_test as fsr
 
 class Breathe(object):
     """This class implements breathing main class
@@ -32,7 +33,6 @@ class Breathe(object):
     """
     def __init__(self, args):
         moveit_commander.roscpp_initialize(sys.argv)
-        rospy.init_node('breathing', anonymous=True)
 
         self.amplitude = args.amplitude
         self.bpm = args.bpm
@@ -278,9 +278,11 @@ if __name__ == '__main__':
         args = parser.parse_args()
         print (args.amplitude, args.bpm, args.gaze, args.source)
 
+        rospy.init_node('breathing', anonymous=True)
+
         br_robot = Breathe(args)
         man_robot = pp.PickPlace()
-
+        fsr_ctl = fsr.FSRCTL()
 
         rate = 10
         sample = rospy.Rate(rate)
@@ -296,8 +298,7 @@ if __name__ == '__main__':
         print ("now or never")
         
         f = open(args.file+".txt", "a")
-        f.write("Test File!\n\n")
-        
+        f.write("Test File!\n\n")       
 
 
         ## First
@@ -305,7 +306,7 @@ if __name__ == '__main__':
         man_robot.state_machine_generic()
         start = timeit.default_timer()
         br_robot.breathe_now()
-        go_next = raw_input("Next:")
+        fsr_ctl.wait()
         stop = timeit.default_timer()
         task1_time = stop-start
         f.write("task1 results!\n")
@@ -315,7 +316,7 @@ if __name__ == '__main__':
         man_robot.state_machine_generic()
         start = timeit.default_timer()
         br_robot.breathe_now()
-        go_next = raw_input("Next:")
+        fsr_ctl.wait()
         stop = timeit.default_timer()
         task2_time = stop-start
         f.write("task2 results!\n")
@@ -325,7 +326,7 @@ if __name__ == '__main__':
         man_robot.state_machine_generic()
         start = timeit.default_timer()
         br_robot.breathe_now()
-        go_next = raw_input("Next:")
+        fsr_ctl.wait()
         stop = timeit.default_timer()
         task3_time = stop-start
         f.write("task3 results!\n")

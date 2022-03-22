@@ -62,3 +62,35 @@ task2 results!
 20.8355679512
 task3 results!
 22.8389239311
+Test File!
+
+task1 results!
+8.09648013115
+task2 results!
+6.54754018784
+task3 results!
+4.16934490204
+Test File!
+
+task1 results!
+3.90765810013
+task2 results!
+2.75123095512
+task3 results!
+3.2705578804
+Test File!
+
+task1 results!
+3.2992348671
+task2 results!
+9.37902903557
+task3 results!
+2.64091396332
+Test File!
+
+task1 results!
+14.3250539303
+task2 results!
+2.4671061039
+task3 results!
+13.5614061356

@@ -26,16 +26,12 @@ import trajectory_msgs.msg
 
 import robot_joint_space as pp
 
-class FSRCTLTEST(object):
-    """This class implements breathing main class
-    implements an action client
+class FSRCTL(object):
+    """This class implements fsr read class
     send_default():
     method3():
     """
-    def __init__(self, args):
-        rospy.init_node('fsr_test', anonymous=True)
-
-        self.file = args.file
+    def __init__(self):
         self.fsr_sub = None
         self.change = False
         self.fsr = False
@@ -45,8 +41,6 @@ class FSRCTLTEST(object):
         self.treshold = 1200
         self.counter = 0
         self.start_subscriber()
-        print("Testing started ...")
-        self.test()
     
     def start_subscriber(self):
         self.fsr_sub = rospy.Subscriber(
@@ -63,13 +57,11 @@ class FSRCTLTEST(object):
                 self.next = False
 
         if self.change:
-            if self.counter < 20:
+            if self.counter < 4:
                 self.counter += 1
             else:
                 self.counter = 0
                 self.change = False
-
-
 
     def test(self):
         while not rospy.is_shutdown():
@@ -79,6 +71,18 @@ class FSRCTLTEST(object):
                     print("waiting")
                     rospy.sleep(0.1)
                 print("next")
+            rospy.sleep(0.1)
+            pass
+
+    def wait(self):
+        while not rospy.is_shutdown():
+            print("sensor",self.fsr,"bounced",self.next)
+            if self.next:
+                while self.next:
+                    print("waiting")
+                    rospy.sleep(0.1)
+                print("next")
+                return True
             rospy.sleep(0.1)
             pass
             
@@ -96,8 +100,10 @@ if __name__ == '__main__':
                             help="Value between 0.0 and 0.2")
         args = parser.parse_args()
         print (args.port, args.file)
-
-        fsr_ctl_test = FSRCTLTEST(args)
+        rospy.init_node('fsr_test', anonymous=True)
+        fsr_ctl_test = FSRCTL()
+        print("Testing started ...")
+        fsr_ctl_test.test()
 
     except rospy.ROSInterruptException:
         print ("Program interrupted before completion")
