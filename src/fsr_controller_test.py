@@ -26,52 +26,63 @@ import trajectory_msgs.msg
 
 import robot_joint_space as pp
 
-class FSRCTL(object):
+class FSRCTLTEST(object):
     """This class implements breathing main class
     implements an action client
     send_default():
     method3():
     """
     def __init__(self, args):
-        rospy.init_node('fsr_read', anonymous=True)
+        rospy.init_node('fsr_test', anonymous=True)
 
         self.file = args.file
-
-        self.ser = serial.Serial(args.port, args.baudrate)
-        self.fsr_pub = None
+        self.fsr_sub = None
+        self.change = False
         self.fsr = False
+        self.fsr_old = False
+        self.next = False
         self.fsr_readings = []
         self.treshold = 1200
-        self.start_publisher()
-        print("reading fsr ...")
-        self.cyclic_message()
+        self.counter = 0
+        self.start_subscriber()
+        print("Testing started ...")
+        self.test()
     
-    def start_publisher(self):
-        self.fsr_pub = rospy.Publisher(
-            'fsr_sequence', std_msgs.msg.Bool, queue_size=1)
+    def start_subscriber(self):
+        self.fsr_sub = rospy.Subscriber(
+            "fsr_sequence", std_msgs.msg.Bool, self.subs_callback)
 
-    def cyclic_message(self):
-        self.ser.reset_input_buffer()
+    def subs_callback(self,data):
+        self.fsr = data.data
+        if ((self.fsr != self.fsr_old) and (not self.change)):
+            self.change = True
+            self.fsr_old = self.fsr
+            if self.fsr:
+                self.next = True
+            else:
+                self.next = False
+
+        if self.change:
+            if self.counter < 20:
+                self.counter += 1
+            else:
+                self.counter = 0
+                self.change = False
+
+
+
+    def test(self):
         while not rospy.is_shutdown():
-            self.fsr_pub.publish(self.fsr)
-            self.serial_step()   
-
-    def serial_step(self):
-        fsr_val = []
-        start = timeit.default_timer()
-        fsr_val_str = self.ser.readline()
-        fsr_val_str_lst = list(fsr_val_str[0:len(fsr_val_str)-2].split(","))
-        try:
-            fsr_val = [int(element) for element in fsr_val_str_lst]
-        except:
-            print("\n\n\n\n\n\nError occured\n\n\n\n\n\n\n")
+            print("sensor",self.fsr,"bounced",self.next)
+            if self.next:
+                while self.next:
+                    print("waiting")
+                    rospy.sleep(0.1)
+                print("next")
+            rospy.sleep(0.1)
             pass
-        running_mean_fsr = sum(fsr_val)
-        if running_mean_fsr > self.treshold:
-            self.fsr = True
-        else:
-            self.fsr = False
-        stop = timeit.default_timer()
+            
+        
         #print(stop-start)
 
 if __name__ == '__main__':
@@ -86,7 +97,7 @@ if __name__ == '__main__':
         args = parser.parse_args()
         print (args.port, args.file)
 
-        fsr_ctl = FSRCTL(args)
+        fsr_ctl_test = FSRCTLTEST(args)
 
     except rospy.ROSInterruptException:
         print ("Program interrupted before completion")
