@@ -38,6 +38,7 @@ class FSRCTL(object):
         self.file = args.file
 
         self.ser = serial.Serial(args.port, args.baudrate)
+        self.fsr_val = std_msgs.msg.UInt16MultiArray()
         self.fsr_pub = None
         self.fsr = False
         self.fsr_readings = []
@@ -48,25 +49,26 @@ class FSRCTL(object):
     
     def start_publisher(self):
         self.fsr_pub = rospy.Publisher(
-            'fsr_sequence', std_msgs.msg.Bool, queue_size=1)
+            'fsr_sequence', std_msgs.msg.UInt16MultiArray, queue_size=1)
 
     def cyclic_message(self):
         self.ser.reset_input_buffer()
         while not rospy.is_shutdown():
-            self.fsr_pub.publish(self.fsr)
+            self.fsr_pub.publish(self.fsr_val)
             self.serial_step()   
 
     def serial_step(self):
-        fsr_val = []
         start = timeit.default_timer()
         fsr_val_str = self.ser.readline()
         fsr_val_str_lst = list(fsr_val_str[0:len(fsr_val_str)-2].split(","))
+        fsr_lst = []
         try:
-            fsr_val = [int(element) for element in fsr_val_str_lst]
+            fsr_lst = [int(element) for element in fsr_val_str_lst]
         except:
             print("\n\n\n\n\n\nError occured\n\n\n\n\n\n\n")
             pass
-        running_mean_fsr = sum(fsr_val)
+        self.fsr_val = std_msgs.msg.UInt16MultiArray(data = fsr_lst)
+        running_mean_fsr = sum(fsr_lst)
         if running_mean_fsr > self.treshold:
             self.fsr = True
         else:

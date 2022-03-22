@@ -33,6 +33,7 @@ class FSRCTL(object):
     """
     def __init__(self):
         self.fsr_sub = None
+        self.fsr_val = std_msgs.msg.UInt16MultiArray()
         self.change = False
         self.fsr = False
         self.fsr_old = False
@@ -44,10 +45,12 @@ class FSRCTL(object):
     
     def start_subscriber(self):
         self.fsr_sub = rospy.Subscriber(
-            "fsr_sequence", std_msgs.msg.Bool, self.subs_callback)
+            "fsr_sequence", std_msgs.msg.UInt16MultiArray, self.subs_callback)
 
     def subs_callback(self,data):
-        self.fsr = data.data
+        self.fsr_val = list(data.data)
+        self.fsr = sum(self.fsr_val)>300
+        #print(type(data.data))
         if ((self.fsr != self.fsr_old) and (not self.change)):
             self.change = True
             self.fsr_old = self.fsr
@@ -66,6 +69,10 @@ class FSRCTL(object):
     def test(self):
         while not rospy.is_shutdown():
             print("sensor",self.fsr,"bounced",self.next)
+            try:
+                print(sum(self.fsr_val))
+            except:
+                pass
             if self.next:
                 while self.next:
                     print("waiting")
