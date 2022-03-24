@@ -288,7 +288,7 @@ if __name__ == '__main__':
         sample = rospy.Rate(rate)
 
         rospy.loginfo("wait")
-        man_robot.go(rosparam.get_param("calib_params/wait"),10.0)
+        #man_robot.go(rosparam.get_param("calib_params/wait"),10.0)
         rospy.loginfo("continue")
         print("--------------------------")
         print("--------------------------")
@@ -297,7 +297,8 @@ if __name__ == '__main__':
         print("--------------------------")
         print ("now or never")
         
-        f = open(args.file+".txt", "a")
+        test_file_name = args.file + "amp" + str(args.amplitude) + "bpm" +str(args.bpm)
+        f = open(test_file_name+".txt", "a")
         f.write("Test File!\n\n")       
 
 
@@ -306,31 +307,34 @@ if __name__ == '__main__':
         man_robot.state_machine_generic()
         start = timeit.default_timer()
         br_robot.breathe_now()
-        fsr_ctl.wait()
+        fsr_ctl.wait(test_file_name,1)
         stop = timeit.default_timer()
         task1_time = stop-start
         f.write("task1 results!\n")
         f.write(str(task1_time)+"\n")
+        rospy.sleep(1.5)
         ## Second
         man_robot.state_machine_creator_2()
         man_robot.state_machine_generic()
         start = timeit.default_timer()
         br_robot.breathe_now()
-        fsr_ctl.wait()
+        fsr_ctl.wait(test_file_name,2)
         stop = timeit.default_timer()
         task2_time = stop-start
         f.write("task2 results!\n")
         f.write(str(task2_time)+"\n")
+        rospy.sleep(1.5)
         ## Third
         man_robot.state_machine_creator_3()
         man_robot.state_machine_generic()
         start = timeit.default_timer()
         br_robot.breathe_now()
-        fsr_ctl.wait()
+        fsr_ctl.wait(test_file_name,3)
         stop = timeit.default_timer()
         task3_time = stop-start
         f.write("task3 results!\n")
         f.write(str(task3_time)+"\n")
+        rospy.sleep(1.5)
 
         # Finish the experiment
         man_robot.go(rosparam.get_param("calib_params/wait"),2.0)

@@ -98,7 +98,7 @@ void loop() {
   unsigned long curr_time = millis();
   if ((curr_time-start_time) > 400 && (curr_time-start_time) < 1000)
   {
-    digitalWrite(ledPin, LOW);
+    digitalWrite(ledPin, HIGH);
   }
   if ((curr_time-start_time) > 1000)
   {

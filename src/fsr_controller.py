@@ -42,7 +42,7 @@ class FSRCTL(object):
         self.fsr_pub = None
         self.fsr = False
         self.fsr_readings = []
-        self.treshold = 1200
+        self.treshold = 5
         self.start_publisher()
         print("reading fsr ...")
         self.cyclic_message()

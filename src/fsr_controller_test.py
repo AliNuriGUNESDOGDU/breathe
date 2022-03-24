@@ -36,10 +36,11 @@ class FSRCTL(object):
         self.fsr_val = std_msgs.msg.UInt16MultiArray()
         self.change = False
         self.fsr = False
+        self.f = None
         self.fsr_old = False
         self.next = False
         self.fsr_readings = []
-        self.treshold = 1200
+        self.treshold = 10
         self.counter = 0
         self.start_subscriber()
     
@@ -49,7 +50,7 @@ class FSRCTL(object):
 
     def subs_callback(self,data):
         self.fsr_val = list(data.data)
-        self.fsr = sum(self.fsr_val)>300
+        self.fsr = sum(self.fsr_val)>self.treshold
         #print(type(data.data))
         if ((self.fsr != self.fsr_old) and (not self.change)):
             self.change = True
@@ -65,30 +66,26 @@ class FSRCTL(object):
             else:
                 self.counter = 0
                 self.change = False
+        if self.next:
+            self.f.write(str(self.fsr_val) + "\n")
 
     def test(self):
         while not rospy.is_shutdown():
-            print("sensor",self.fsr,"bounced",self.next)
-            try:
-                print(sum(self.fsr_val))
-            except:
-                pass
-            if self.next:
-                while self.next:
-                    print("waiting")
-                    rospy.sleep(0.1)
-                print("next")
-            rospy.sleep(0.1)
+            self.wait()
             pass
 
-    def wait(self):
+    def wait(self,file_name="deneme",test_num="0"):
+        self.f = open(file_name+str(test_num)+".txt", "a")
+        self.f.write(file_name+str(test_num) + "\n\n")
         while not rospy.is_shutdown():
             print("sensor",self.fsr,"bounced",self.next)
             if self.next:
                 while self.next:
-                    print("waiting")
+                    print("waiting")                    
                     rospy.sleep(0.1)
                 print("next")
+                self.f.write("\n\n" + "End of file" + "\n\n")
+                self.f.close()
                 return True
             rospy.sleep(0.1)
             pass
