@@ -1,8 +1,0 @@
-
-
-task1 results!
-31.4917669296
-task2 results!
-29.7800700665
-task3 results!
-36.0877580643

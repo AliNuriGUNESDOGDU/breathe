@@ -239,7 +239,7 @@ class Breathe(object):
                 if theta < -math.pi:
                     theta += math.pi*2
                 list_b[-1] = theta
-                # print("Theta " ,theta)
+                #print("Theta " ,theta)
                 point.positions = tuple(list_b)
                 d += inc
                 self.goal_j.trajectory.points.append(
@@ -303,7 +303,7 @@ if __name__ == '__main__':
 
 
         ## First
-        man_robot.state_machine_creator_1()
+        man_robot.state_machine_creator_2()
         man_robot.state_machine_generic()
         start = timeit.default_timer()
         br_robot.breathe_now()
@@ -314,7 +314,7 @@ if __name__ == '__main__':
         f.write(str(task1_time)+"\n")
         rospy.sleep(1.5)
         ## Second
-        man_robot.state_machine_creator_2()
+        man_robot.state_machine_creator_3()
         man_robot.state_machine_generic()
         start = timeit.default_timer()
         br_robot.breathe_now()
@@ -325,7 +325,7 @@ if __name__ == '__main__':
         f.write(str(task2_time)+"\n")
         rospy.sleep(1.5)
         ## Third
-        man_robot.state_machine_creator_3()
+        man_robot.state_machine_creator_4()
         man_robot.state_machine_generic()
         start = timeit.default_timer()
         br_robot.breathe_now()
