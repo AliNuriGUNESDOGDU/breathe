@@ -1,0 +1,64 @@
+Test File!
+
+task1 results!
+0.00302004814148
+task2 results!
+0.00316596031189
+task3 results!
+0.00324201583862
+Test File!
+
+task1 results!
+0.00305914878845
+task2 results!
+0.00345301628113
+task3 results!
+0.0030460357666
+Test File!
+
+task1 results!
+0.00295090675354
+task2 results!
+0.00307607650757
+task3 results!
+0.00306296348572
+Test File!
+
+task1 results!
+0.203289985657
+task2 results!
+0.203274011612
+task3 results!
+0.0070481300354
+Test File!
+
+task1 results!
+0.0031099319458
+task2 results!
+9.98973846436e-05
+task3 results!
+0.00014591217041
+Test File!
+
+task1 results!
+0.007887840271
+task2 results!
+0.00346207618713
+task3 results!
+0.00012993812561
+Test File!
+
+task1 results!
+0.00303483009338
+task2 results!
+0.303394079208
+task3 results!
+0.00296115875244
+Test File!
+
+task1 results!
+9.79900360107e-05
+task2 results!
+0.300569057465
+task3 results!
+0.000102996826172

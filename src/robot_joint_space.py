@@ -162,7 +162,7 @@ class PickPlace(object):
             ("close",self.goal_j,self.close,0.0,self.gripper_pub)))
         ######### go wait ########
         self.node_list.append(Maneuver(("wait",self.goal_j,
-            rosparam.get_param("calib_params/wait"),3.0,self.client)))
+            rosparam.get_param("calib_params/wait"),3.5,self.client)))
 
     def state_machine_creator_2(self):
         ######### start as closed ########
@@ -197,7 +197,7 @@ class PickPlace(object):
             ("close",self.goal_j,self.close,0.0,self.gripper_pub)))
         ######### go wait ########
         self.node_list.append(Maneuver(("wait",self.goal_j,
-            rosparam.get_param("calib_params/wait"),3.0,self.client)))
+            rosparam.get_param("calib_params/wait"),3.5,self.client)))
 
     def state_machine_creator_3(self):
         ######### start as closed ########
@@ -232,7 +232,7 @@ class PickPlace(object):
             ("close",self.goal_j,self.close,0.0,self.gripper_pub)))
         ######### go wait ########
         self.node_list.append(Maneuver(("wait",self.goal_j,
-            rosparam.get_param("calib_params/wait"),3.0,self.client)))
+            rosparam.get_param("calib_params/wait"),3.5,self.client)))
 
 
     def state_machine_creator_4(self):
@@ -268,7 +268,7 @@ class PickPlace(object):
             ("close",self.goal_j,self.close,0.0,self.gripper_pub)))
         ######### go wait ########
         self.node_list.append(Maneuver(("wait",self.goal_j,
-            rosparam.get_param("calib_params/wait"),3.0,self.client)))
+            rosparam.get_param("calib_params/wait"),3.5,self.client)))
 
     def go(self,q_to_go,time_to_go):
         """Send robot to calculated joint positions
