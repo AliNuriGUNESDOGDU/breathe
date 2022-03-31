@@ -6,6 +6,7 @@ This module uses PEP-8 as coding standard.
 
 import argparse
 import copy
+import datetime
 import math
 import numpy as np
 import sys
@@ -322,35 +323,47 @@ if __name__ == '__main__':
         man_robot.state_machine_generic()
         start = timeit.default_timer()
         br_robot.execute_breathe()
+        rospy.set_param("ble_params/write2file", True)
+        rospy.set_param("ble_params/name_file", test_file_name+"task1")
+        rospy.sleep(1.5)
+        raw_input("asd: ")
+        rospy.set_param("ble_params/write2file", False)
         stop = timeit.default_timer()
         task1_time = stop-start
         f.write("task1 results!\n")
-        f.write(str(task1_time)+"\n")
-        rospy.sleep(1.5)
-        raw_input("asd: ")
+        f.write("Stop at :"+str(datetime.datetime.now())+"\n")
+        f.write("Lasts :"+str(task1_time)+"\n")
         ## Second
         man_robot.state_machine_creator_3()
         man_robot.state_machine_generic()
         start = timeit.default_timer()
         rospy.sleep(0.3)
         br_robot.execute_breathe()
+        rospy.set_param("ble_params/write2file", True)
+        rospy.set_param("ble_params/name_file", test_file_name+"task2")
+        rospy.sleep(1.5)
+        raw_input("asd: ")
+        rospy.set_param("ble_params/write2file", False)
         stop = timeit.default_timer()
         task2_time = stop-start
         f.write("task2 results!\n")
-        f.write(str(task2_time)+"\n")
-        rospy.sleep(1.5)
-        raw_input("asd: ")
+        f.write("Stop at :"+str(datetime.datetime.now())+"\n")
+        f.write("Lasts :"+str(task1_time)+"\n")
         ## Third
         man_robot.state_machine_creator_4()
         man_robot.state_machine_generic()
         start = timeit.default_timer()
         br_robot.execute_breathe()
+        rospy.set_param("ble_params/write2file", True)
+        rospy.set_param("ble_params/name_file", test_file_name+"task3")
+        rospy.sleep(1.5)
+        raw_input("asd: ")
+        rospy.set_param("ble_params/write2file", False)
         stop = timeit.default_timer()
         task3_time = stop-start
         f.write("task3 results!\n")
-        f.write(str(task3_time)+"\n")
-        rospy.sleep(1.5)
-        raw_input("asd: ")
+        f.write("Stop at :"+str(datetime.datetime.now())+"\n")
+        f.write("Lasts :"+str(task1_time)+"\n")
 
         # Finish the experiment
         man_robot.go(rosparam.get_param("calib_params/wait"),2.0)
