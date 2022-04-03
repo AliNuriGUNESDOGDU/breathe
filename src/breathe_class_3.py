@@ -348,7 +348,7 @@ if __name__ == '__main__':
         task2_time = stop-start
         f.write("task2 results!\n")
         f.write("Stop at :"+str(datetime.datetime.now())+"\n")
-        f.write("Lasts :"+str(task1_time)+"\n")
+        f.write("Lasts :"+str(task2_time)+"\n")
         ## Third
         man_robot.state_machine_creator_4()
         man_robot.state_machine_generic()
@@ -363,7 +363,7 @@ if __name__ == '__main__':
         task3_time = stop-start
         f.write("task3 results!\n")
         f.write("Stop at :"+str(datetime.datetime.now())+"\n")
-        f.write("Lasts :"+str(task1_time)+"\n")
+        f.write("Lasts :"+str(task3_time)+"\n")
 
         # Finish the experiment
         man_robot.go(rosparam.get_param("calib_params/wait"),2.0)
