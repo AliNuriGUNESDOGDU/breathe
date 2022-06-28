@@ -60,7 +60,7 @@ def gripper_client(value,link):
         JointTrajectoryPoint(positions=[1.5708,0,0,-2.58,-1.5708,1.5708], velocities=[0.01,0,0,0,0,0], 
             time_from_start=rospy.Duration(1.0))]
 
-    video_record = True
+    video_record = False
     '''
     # Breathe Type-1
     x_init = -0.2
@@ -198,7 +198,7 @@ def gripper_client(value,link):
         + str(phase_angle_x) + "_py_" + str(phase_angle_y) +"_ykp_" +str(y_kp)
 
 
-    while d < 50:
+    while d < 3:
         x1 = x_init + amplitude*math.cos(angle+phase_angle_x)
         y1 = y_init + amplitude*y_kp*math.cos(angle+phase_angle_y)
         angle += math.pi/numberofsamples

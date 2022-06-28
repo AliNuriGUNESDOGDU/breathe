@@ -298,9 +298,9 @@ if __name__ == '__main__':
         # pp.grip_now()
         q1 = [2.948946237564087, 1.2651704549789429, -1.7448294798480433, -1.0737288633929651,
   -1.5695560614215296, -1.71824819246401]
-        pp.state_machine_creator_2()
-        pp.state_machine_generic()
-        #pp.go(rosparam.get_param("calib_params/wait"),10.0)
+        #pp.state_machine_creator_2()
+        #pp.state_machine_generic()
+        pp.go(rosparam.get_param("calib_params/wait"),10.0)
         #pp.go(rosparam.get_param("calib_params/ready_pick4"),10.0)
         #pp.go(rosparam.get_param("calib_params/ready_release"),10.0)
         #pp.go(rosparam.get_param("calib_params/release"),10.0)
